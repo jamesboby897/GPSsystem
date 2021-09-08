@@ -8,13 +8,15 @@ const unsigned char UBX_HEADER[]        = { 0xB5, 0x62 };
 const unsigned char NAV_POSLLH_HEADER[] = { 0x01, 0x02 };
 const unsigned char NAV_STATUS_HEADER[] = { 0x01, 0x03 };
 
-enum _ubxMsgType {
+enum _ubxMsgType 
+{
   MT_NONE,
   MT_NAV_POSLLH,
   MT_NAV_STATUS
 };
 
-struct NAV_POSLLH {
+struct NAV_POSLLH 
+{
   unsigned char cls;
   unsigned char id;
   unsigned short len;
@@ -27,7 +29,8 @@ struct NAV_POSLLH {
   unsigned long vAcc;
 };
 
-struct NAV_STATUS {
+struct NAV_STATUS 
+{
   unsigned char cls;
   unsigned char id;
   unsigned short len;
@@ -40,18 +43,48 @@ struct NAV_STATUS {
   unsigned long msss;
 };
 
-union UBXMessage {
+union UBXMessage 
+{
   NAV_POSLLH navPosllh;
   NAV_STATUS navStatus;
 };
 
 UBXMessage ubxMessage;
-
+void initGPS()
+{
+  const char GPS_INIT_DATA[] PROGMEM =
+  {
+    // Disable NMEA
+    0xB5,0x62,0x06,0x01,0x08,0x00,0xF0,0x00,0x00,0x00,0x00,0x00,0x00,0x01,0x00,0x24, // GxGGA off
+    0xB5,0x62,0x06,0x01,0x08,0x00,0xF0,0x01,0x00,0x00,0x00,0x00,0x00,0x01,0x01,0x2B, // GxGLL off
+    0xB5,0x62,0x06,0x01,0x08,0x00,0xF0,0x02,0x00,0x00,0x00,0x00,0x00,0x01,0x02,0x32, // GxGSA off
+    0xB5,0x62,0x06,0x01,0x08,0x00,0xF0,0x03,0x00,0x00,0x00,0x00,0x00,0x01,0x03,0x39, // GxGSV off
+    0xB5,0x62,0x06,0x01,0x08,0x00,0xF0,0x04,0x00,0x00,0x00,0x00,0x00,0x01,0x04,0x40, // GxRMC off
+    0xB5,0x62,0x06,0x01,0x08,0x00,0xF0,0x05,0x00,0x00,0x00,0x00,0x00,0x01,0x05,0x47, // GxVTG off
+    // Disable UBX
+    0xB5,0x62,0x06,0x01,0x08,0x00,0x01,0x07,0x00,0x00,0x00,0x00,0x00,0x00,0x17,0xDC, //NAV-PVT off
+    0xB5,0x62,0x06,0x01,0x08,0x00,0x01,0x02,0x00,0x00,0x00,0x00,0x00,0x00,0x12,0xB9, //NAV-POSLLH off
+    0xB5,0x62,0x06,0x01,0x08,0x00,0x01,0x03,0x00,0x00,0x00,0x00,0x00,0x00,0x13,0xC0, //NAV-STATUS off
+    // Enable UBX
+    0xB5,0x62,0x06,0x01,0x08,0x00,0x01,0x02,0x00,0x01,0x00,0x00,0x00,0x00,0x13,0xBE, //NAV-POSLLH on
+    0xB5,0x62,0x06,0x01,0x08,0x00,0x01,0x03,0x00,0x01,0x00,0x00,0x00,0x00,0x14,0xC5, //NAV-STATUS on
+    // Rate
+    0xB5,0x62,0x06,0x08,0x06,0x00,0x64,0x00,0x01,0x00,0x01,0x00,0x7A,0x12,
+  };
+    GPS_Module.begin(9600,SERIAL_8N1,16,17);
+    for(int i = 0; i < sizeof(GPS_INIT_DATA); i++) 
+    {                        
+     GPS_Module.write( pgm_read_byte(GPS_INIT_DATA+i) );
+     delay(5); // simulating a 38400baud pace (or less), otherwise commands are not accepted by the device.
+    }
+}
 // The last two bytes of the message is a checksum value, used to confirm that the received payload is valid.
 // The procedure used to calculate this is given as pseudo-code in the uBlox manual.
-void calcChecksum(unsigned char* CK, int msgSize) {
+void calcChecksum(unsigned char* CK, int msgSize) 
+{
   memset(CK, 0, 2);
-  for (int i = 0; i < msgSize; i++) {
+  for (int i = 0; i < msgSize; i++) 
+  {
     CK[0] += ((unsigned char*)(&ubxMessage))[i];
     CK[1] += CK[0];
   }
@@ -60,7 +93,8 @@ void calcChecksum(unsigned char* CK, int msgSize) {
 
 // Compares the first two bytes of the ubxMessage struct with a specific message header.
 // Returns true if the two bytes match.
-boolean compareMsgHeader(const unsigned char* msgHeader) {
+boolean compareMsgHeader(const unsigned char* msgHeader) 
+{
   unsigned char* ptr = (unsigned char*)(&ubxMessage);
   return ptr[0] == msgHeader[0] && ptr[1] == msgHeader[1];
 }
@@ -71,26 +105,30 @@ boolean compareMsgHeader(const unsigned char* msgHeader) {
 // After a successful return the contents of the ubxMessage union will be valid, for the 
 // message type that was found. Note that further calls to this function can invalidate the
 // message content, so you must use the obtained values before calling this function again.
-int processGPS() {
+int processGPS() 
+{
   static int fpos = 0;
   static unsigned char checksum[2];
   
   static byte currentMsgType = MT_NONE;
   static int payloadSize = sizeof(UBXMessage);
 
-  while ( GPS_Module.available() ) {
+  while ( GPS_Module.available() ) 
+  {
     
     byte c = GPS_Module.read();    
     //Serial.write(c);
     
-    if ( fpos < 2 ) {
+    if ( fpos < 2 ) 
+    {
       // For the first two bytes we are simply looking for a match with the UBX header bytes (0xB5,0x62)
       if ( c == UBX_HEADER[fpos] )
         fpos++;
       else
         fpos = 0; // Reset to beginning state.
     }
-    else {
+    else 
+    {
       // If we come here then fpos >= 2, which means we have found a match with the UBX_HEADER
       // and we are now reading in the bytes that make up the payload.
       
@@ -101,47 +139,57 @@ int processGPS() {
 
       fpos++;
       
-      if ( fpos == 4 ) {
+      if ( fpos == 4 ) 
+      {
         // We have just received the second byte of the message type header, 
         // so now we can check to see what kind of message it is.
-        if ( compareMsgHeader(NAV_POSLLH_HEADER) ) {
+        if ( compareMsgHeader(NAV_POSLLH_HEADER) ) 
+        {
           currentMsgType = MT_NAV_POSLLH;
           payloadSize = sizeof(NAV_POSLLH);
         }
-        else if ( compareMsgHeader(NAV_STATUS_HEADER) ) {
+        else if ( compareMsgHeader(NAV_STATUS_HEADER) ) 
+        {
           currentMsgType = MT_NAV_STATUS;
           payloadSize = sizeof(NAV_STATUS);
         }
-        else {
+        else 
+        {
           // unknown message type, bail
           fpos = 0;
           continue;
         }
       }
 
-      if ( fpos == (payloadSize+2) ) {
+      if ( fpos == (payloadSize+2) ) 
+      {
         // All payload bytes have now been received, so we can calculate the 
         // expected checksum value to compare with the next two incoming bytes.
         calcChecksum(checksum, payloadSize);
       }
-      else if ( fpos == (payloadSize+3) ) {
+      else if ( fpos == (payloadSize+3) ) 
+      {
         // First byte after the payload, ie. first byte of the checksum.
         // Does it match the first byte of the checksum we calculated?
-        if ( c != checksum[0] ) {
+        if ( c != checksum[0] ) 
+        {
           // Checksum doesn't match, reset to beginning state and try again.
           fpos = 0; 
         }
       }
-      else if ( fpos == (payloadSize+4) ) {
+      else if ( fpos == (payloadSize+4) ) 
+      {
         // Second byte after the payload, ie. second byte of the checksum.
         // Does it match the second byte of the checksum we calculated?
         fpos = 0; // We will reset the state regardless of whether the checksum matches.
-        if ( c == checksum[1] ) {
+        if ( c == checksum[1] ) 
+        {
           // Checksum matches, we have a valid message.
           return currentMsgType; 
         }
       }
-      else if ( fpos > (payloadSize+4) ) {
+      else if ( fpos > (payloadSize+4) ) 
+      {
         // We have now read more bytes than both the expected payload and checksum 
         // together, so something went wrong. Reset to beginning state and try again.
         fpos = 0;
@@ -154,13 +202,14 @@ int processGPS() {
 void setup() 
 {
   BtSerial.begin();
-  GPS_Module.begin(9600,SERIAL_8N1,16,17);
+  initGPS();
 }
 
 long lat;
 long lon;
 
-void loop() {
+void loop() 
+{
   int msgType = processGPS();
   if ( msgType == MT_NAV_POSLLH ) {
     BtSerial.print("iTOW:");      BtSerial.print(ubxMessage.navPosllh.iTOW);
