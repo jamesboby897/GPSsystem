@@ -213,7 +213,7 @@ void loop()
   int msgType = processGPS();
   if ( msgType == MT_NAV_POSLLH ) {
     BtSerial.print("iTOW:");      BtSerial.print(ubxMessage.navPosllh.iTOW);
-    BtSerial.print(" lat/lon: "); BtSerial.print(ubxMessage.navPosllh.lat/10000000.0f); BtSerial.print(","); BtSerial.print(ubxMessage.navPosllh.lon/10000000.0f);
+    BtSerial.print(" lat/lon: "); BtSerial.print(ubxMessage.navPosllh.lat); BtSerial.print(","); BtSerial.print(ubxMessage.navPosllh.lon);
     BtSerial.print(" hAcc: ");    BtSerial.print(ubxMessage.navPosllh.hAcc/1000.0f);
     BtSerial.println();
   }
