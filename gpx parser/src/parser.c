@@ -16,7 +16,6 @@ int main(int argc, char* argv[])
     {
         int lon;
         int lat;
-        int trackpos;
     }Coordinates;
     int fd = open(argv[1], O_RDONLY,S_IRUSR | S_IWUSR);
     struct stat sb;
@@ -36,6 +35,7 @@ int main(int argc, char* argv[])
     gpx_data=strstr(gpx_data,"<trkseg>");
     memcpy(trkseg,gpx_data,sb.st_size-start_loc);
     munmap(gpx_data, sb.st_size);
+    close(fd);
     tok=strtok(trkseg,">");
     int count=0;
     while(tok!=NULL)
@@ -48,22 +48,18 @@ int main(int argc, char* argv[])
             if(temp<10&&temp>-10)
                 temp=temp*10;
             temp=temp*10000000;
-            Coordinates.lat=(int)temp;
-            printf("lat:%d,",Coordinates.lat);
+            printf("%d,",(int)temp);
             tok=strchr(tok,'"')+1;
             tok=strchr(tok,'"')+1;
             temp=atof(tok);
             if(temp<10&&temp>-10)
                 temp=temp*10;
             temp=temp*10000000;
-            Coordinates.lon=(int)temp;
-            printf("lon:%d\n",Coordinates.lon);
+            printf("%d\n",(int)temp);
             count++;
-            Coordinates.trackpos=count;
-            printf("Pos:%d\n",Coordinates.trackpos);
         }
         tok=strtok(NULL,">");
     }
+    printf("%ld",sizeof(Coordinates));
     free(trkseg);
-    close(fd);
 }

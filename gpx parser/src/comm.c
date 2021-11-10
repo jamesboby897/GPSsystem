@@ -11,7 +11,7 @@ int main()
     char *portname = TERMINAL;
     int fd;
     int wlen;
-    char *xstr = "Hello!\n";
+    char *xstr = "Hello i am under the water here too much raining please help me uuuuuuu\n";
     int xlen = strlen(xstr);
     fd = open(portname, O_RDWR | O_NOCTTY | O_SYNC);
     if (fd < 0) {
